@@ -3,11 +3,12 @@ import io
 import textwrap
 import traceback
 from contextlib import redirect_stdout
-
+import discord
 import aiohttp
+import asyncio
 from discord.ext import commands
 
-class Eval:
+class Eval(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -15,15 +16,18 @@ class Eval:
     async def _eval(self, ctx, *, body):
         """Evaluates python code"""
         env = {
+            'discord': discord,
             'ctx': ctx,
             'bot': self.bot,
             'channel': ctx.channel,
             'author': ctx.author,
             'guild': ctx.guild,
             'message': ctx.message,
-            'source': inspect.getsource
+            'source': inspect.getsource,
+            'asyncio': asyncio
         }
-
+        if not await self.bot.is_owner(ctx.author):
+            return await ctx.send("You can't use that command!")
         def cleanup_code(content):
             """Automatically removes code blocks from the code."""
             # remove ```py\n```
@@ -53,7 +57,7 @@ class Eval:
             if appd_index != len(text)-1:
                 pages.append(text[last:curr])
             return list(filter(lambda a: a != '', pages))
-        
+
         try:
             exec(to_compile, env)
         except Exception as e:
@@ -72,7 +76,7 @@ class Eval:
             if ret is None:
                 if value:
                     try:
-                        
+
                         out = await ctx.send(f'```py\n{value}\n```')
                     except:
                         paginated_text = paginate(value)
@@ -95,7 +99,7 @@ class Eval:
         if out:
             await ctx.message.add_reaction('\u2705')  # tick
         elif err:
-            await ctx.message.add_reaction('\u2049')  # x
+            await ctx.message.add_reaction('\u274C')  # x
         else:
             await ctx.message.add_reaction('\u2705')
 
